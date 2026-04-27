@@ -269,7 +269,7 @@ result.write.mode("overwrite").parquet(cfg["io"]["output_parquet"])
 
 ### or
 
-```
+```python
 from pathlib import Path
 import os
 import shutil
@@ -310,7 +310,7 @@ spark = builder.getOrCreate()
 spark
 ```
 
-```
+```python
 # Load data from config
 from pathlib import Path
 
@@ -325,7 +325,7 @@ customers_df.show()
 orders_df.show()
 ```
 
-```
+```python
 # Use reusable transformations
 import sys, importlib
 for mod in list(sys.modules):
@@ -341,7 +341,7 @@ result  = compute_customer_sales(joined)
 result.show()
 ```
 
-```
+```python
 # Save results
 # On Windows, Spark's native Parquet writer requires winutils.exe (Hadoop).
 # pyarrow is already installed, so we write via pandas/pyarrow to bypass that dependency.
