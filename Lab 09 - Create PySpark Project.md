@@ -267,6 +267,103 @@ result.show()
 result.write.mode("overwrite").parquet(cfg["io"]["output_parquet"])
 ```
 
+### or
+
+```
+from pathlib import Path
+import os
+import shutil
+import sys
+
+import pyspark
+import yaml
+from pyspark.sql import SparkSession
+
+repo_root = Path.cwd()
+if not (repo_root / "config" / "config.yaml").exists() and (repo_root.parent / "config" / "config.yaml").exists():
+    repo_root = repo_root.parent
+
+os.chdir(repo_root)
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
+java_exe = shutil.which("java")
+if not java_exe:
+    raise RuntimeError("Java is not available on PATH for the notebook kernel.")
+
+spark_home = Path(pyspark.__file__).resolve().parent
+spark_submit = spark_home / "bin" / "spark-submit.cmd"
+if not spark_submit.exists():
+    raise RuntimeError(f"PySpark launcher not found at {spark_submit}")
+
+os.environ["JAVA_HOME"] = os.environ.get("JAVA_HOME") or str(Path(java_exe).resolve().parent.parent)
+os.environ["SPARK_HOME"] = str(spark_home)
+os.environ.setdefault("PYSPARK_ALLOW_INSECURE_GATEWAY", "1")
+
+cfg = yaml.safe_load((repo_root / "config" / "config.yaml").read_text(encoding="utf-8"))
+
+builder = SparkSession.builder.appName(cfg["spark"]["app_name"]).master(cfg["spark"]["master"])
+for key, value in cfg["spark"]["configs"].items():
+    builder = builder.config(key, value)
+
+spark = builder.getOrCreate()
+spark
+```
+
+```
+# Load data from config
+from pathlib import Path
+
+customers_path = repo_root / cfg["io"]["customers_csv"]
+orders_path = repo_root / cfg["io"]["orders_jsonl"]
+if not orders_path.exists() and orders_path.with_suffix(".json").exists():
+    orders_path = orders_path.with_suffix(".json")
+
+customers_df = spark.read.option("header", True).csv(str(customers_path))
+orders_df = spark.read.json(str(orders_path))
+customers_df.show()
+orders_df.show()
+```
+
+```
+# Use reusable transformations
+import sys, importlib
+for mod in list(sys.modules):
+    if mod.startswith('src'):
+        del sys.modules[mod]
+importlib.invalidate_caches()
+
+from src.transformations import clean_customers, join_customers_orders, compute_customer_sales
+
+cleaned = clean_customers(customers_df)
+joined  = join_customers_orders(cleaned, orders_df)
+result  = compute_customer_sales(joined)
+result.show()
+```
+
+```
+# Save results
+# On Windows, Spark's native Parquet writer requires winutils.exe (Hadoop).
+# pyarrow is already installed, so we write via pandas/pyarrow to bypass that dependency.
+import shutil
+
+output_path = repo_root / cfg["io"]["output_parquet"]
+
+# Clear any previous run
+if output_path.exists():
+    shutil.rmtree(output_path)
+output_path.mkdir(parents=True, exist_ok=True)
+
+# Convert to pandas and write a single Parquet file with pyarrow
+result.toPandas().to_parquet(
+    str(output_path / "part-00000.parquet"),
+    index=False,
+    engine="pyarrow",
+)
+
+print(f"Parquet written to: {output_path}")
+```
+
 ---
 
 ## **Step 7: Create README**
