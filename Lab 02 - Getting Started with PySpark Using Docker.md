@@ -102,11 +102,7 @@ docker images
 ### For Windows PowerShell
 
 ```powershell
-docker run -it --rm `
-  -v ${PWD}/data:/opt/spark/work-dir/data `
-  -v ${PWD}/scripts:/opt/spark/work-dir/scripts `
-  -v ${PWD}/output:/opt/spark/work-dir/output `
-  apache/spark:latest /bin/bash
+docker run -it --rm -v ${PWD}/data:/opt/spark/work-dir/data -v ${PWD}/scripts:/opt/spark/work-dir/scripts -v ${PWD}/output:/opt/spark/work-dir/output  apache/spark:latest /bin/bash
 ```
 
 ### For Linux/Mac
@@ -128,7 +124,15 @@ You are now inside the Spark container.
 Inside the container, run:
 
 ```bash
-pyspark
+/opt/spark/bin
+
+ls -l pyspark
+
+chmod +x pyspark
+```
+
+```bash
+./pyspark
 ```
 
 You should see the PySpark shell.
