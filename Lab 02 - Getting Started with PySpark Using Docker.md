@@ -371,7 +371,9 @@ docker run -it --rm `
 Run the script:
 
 ```bash
-spark-submit /opt/spark/work-dir/scripts/employee_analysis.py
+exit()
+
+./spark-submit /opt/spark/work-dir/scripts/employee_analysis.py
 ```
 
 Check output folder:
